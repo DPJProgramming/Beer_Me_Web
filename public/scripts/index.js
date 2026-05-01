@@ -1,14 +1,17 @@
+let allBeers = [];
+
 window.onload = async () => {
     const config = {
         method:"get",
         mode: "cors"
     }
-    const response = await fetch('/topBeers', config);
+    const response = await fetch('/allBeers', config);
     if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const beers = await response.json();
+    allBeers = beers;
 
     if (!beers || !Array.isArray(beers) || beers.length === 0) {
         noBeerAlert();
@@ -16,9 +19,11 @@ window.onload = async () => {
     else{
         displayBeers(beers);
 
-        //load search element
+        const sort = document.getElementById("sort");
+        sort.addEventListener('change', () => sortBy(allBeers, sort.value));
+
         const search = document.getElementById("search");
-        search.addEventListener('input',() => searchFor(beers, search.value));
+        search.addEventListener('input',() => searchFor(allBeers, search.value));
     }
     
 }
@@ -34,14 +39,14 @@ function displayBeers(beers){
         name.setAttribute("id", beer.id);
 
         const image = document.createElement("img");
-        image.src = `img/${beer.image}` ;
+        setBeerImage(image, beer.image, beer.name);
         image.alt = beer.name;
         // Add these lines to constrain image size:
         image.style.maxWidth = "200px";
         image.style.maxHeight = "200px";
-        image.style.objectFit = "cover";  // Maintains aspect ratio while filling the space
-        image.style.display = "block";    // Makes image a block element
-        image.style.margin = "10px 0";    // Adds some spacing above/below
+        image.style.objectFit = "cover";  
+        image.style.display = "block";    
+        image.style.margin = "10px 0";    
 
         const rating = document.createElement("span");
         rating.innerText = `Rating: ${beer.rating}/5`;
@@ -61,31 +66,35 @@ function displayBeers(beers){
         const date = document.createElement("span");
         date.innerText = `Added on: ${beer.date}`;
 
-        const edit = document.createElement("a");
-        edit.href = `/editBeer.html?id=${beer.id}`;
-        edit.innerText = "Modify";
+        const details = document.createElement("a");
+        details.href = `/beerDetails.html?id=${beer.id}`;
+        details.innerText = "View Details";
 
-        //create delete form elements and handle click
-        const deleteBeer = document.createElement("input");
-        deleteBeer.type = "submit";
-        deleteBeer.value = "Delete";
-        deleteBeer.name = "delete";
+        const editLink = document.createElement("a");
+        editLink.href = `/editBeer.html?id=${beer.id}`;
+        editLink.innerText = "Edit";
+        editLink.style.marginLeft = "10px";
 
-        const id = document.createElement("input");
-        id.type = "hidden";
-        id.name = "id";
-        id.value = beer.id;
+        // delete button: call DELETE and redirect to home on success
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.innerText = "Delete";
+        deleteBtn.style.marginLeft = "10px";
 
-        const deleteForm = document.createElement("form");
-        deleteForm.appendChild(deleteBeer);
-        deleteForm.appendChild(id);
-        deleteForm.method = "POST";
-        deleteForm.action = `/deleteBeer/${beer.id}`;
-
-        deleteBeer.onclick = function(event) {
+        deleteBtn.onclick = async function(event) {
             event.preventDefault();
-            if(confirm(`Are you sure you want to delete ${beer.name}?`)){
-                deleteForm.submit();
+            if (!confirm(`Are you sure you want to delete ${beer.name}?`)) return;
+            try {
+                const res = await fetch(`/deleteBeer/${beer.id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    alert('Beer deleted successfully');
+                    window.location.href = 'index.html';
+                } else {
+                    alert('Failed to delete beer. Please try again.');
+                }
+            } catch (err) {
+                console.error('Delete failed', err);
+                alert('Failed to delete beer. Please try again.');
             }
         };
 
@@ -108,14 +117,57 @@ function displayBeers(beers){
         li.appendChild(type);
         li.appendChild(location);
         li.appendChild(date);
-        li.appendChild(edit);
-        li.appendChild(deleteForm);
+        li.appendChild(details);
+        li.appendChild(editLink);
+        li.appendChild(deleteBtn);
         li.appendChild(br);
 
         li.setAttribute("class", "beer-item");
 
         ul.appendChild(li);
     })
+}
+
+function setBeerImage(image, beerImage, beerName) {
+    const placeholder = '/img/placeholder.png';
+    const imagePath = beerImage ? `/img/${encodeURIComponent(beerImage)}` : placeholder;
+
+    image.onerror = () => {
+        image.onerror = null;
+        image.src = placeholder;
+    };
+
+    image.src = imagePath;
+    image.alt = beerName;
+}
+
+function sortBy(beers, sortOption){
+    let sortedBeers;
+
+    switch(sortOption){
+        case "name":
+            sortedBeers = beers.sort((a, b) => a.name.localeCompare(b.name));
+            break;
+        case "rating":
+            sortedBeers = beers.sort((a, b) => b.rating - a.rating);
+            break;
+        case "date asc":
+            sortedBeers = beers.sort((a, b) => new Date(a.date) - new Date(b.date));
+            break;
+        case "date desc":
+            sortedBeers = beers.sort((a, b) => new Date(b.date) - new Date(a.date));
+            break;
+        case "type":
+            sortedBeers = beers.sort((a, b) => a.type.localeCompare(b.type));
+            break;
+        case "brewery":
+            sortedBeers = beers.sort((a, b) => a.brewery.localeCompare(b.brewery));
+            break;
+        default:
+            sortedBeers = beers;
+    }
+
+    displayBeers(sortedBeers);
 }
 
 function noBeerAlert(){
@@ -140,7 +192,8 @@ function searchFor(beers, term){
     }
     else{
         message.innerText = ""
-        displayBeers(filteredBeers);
+        const currentSort = document.getElementById('sort').value;
+        sortBy(filteredBeers, currentSort);
     }
 }
 

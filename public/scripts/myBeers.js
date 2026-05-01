@@ -31,7 +31,7 @@ function displayBeers(beers){
         name.setAttribute("id", beer.id);
 
         const image = document.createElement("img");
-        image.src = `img/${beer.image}` ;
+        setBeerImage(image, beer.image, beer.name);
         image.alt = beer.name;
         // Add these lines to constrain image size:
         image.style.maxWidth = "200px";
@@ -58,31 +58,35 @@ function displayBeers(beers){
         const date = document.createElement("span");
         date.innerText = `Added on: ${beer.date}`;
 
+        const details = document.createElement("a");
+        details.href = `/beerDetails.html?id=${beer.id}`;
+        details.innerText = "View Details";
+
         const edit = document.createElement("a");
         edit.href = `/editBeer.html?id=${beer.id}`;
-        edit.innerText = "Modify";
+        edit.innerText = "Edit";
+        edit.style.marginLeft = "10px";
 
-        //create delete form elements and handle click
-        const deleteBeer = document.createElement("input");
-        deleteBeer.type = "submit";
-        deleteBeer.value = "Delete";
-        deleteBeer.name = "delete";
+        // delete button: call DELETE and redirect to home on success
+        const deleteBtn = document.createElement("button");
+        deleteBtn.type = "button";
+        deleteBtn.innerText = "Delete";
+        deleteBtn.style.marginLeft = "10px";
 
-        const id = document.createElement("input");
-        id.type = "hidden";
-        id.name = "id";
-        id.value = beer.id;
-
-        const deleteForm = document.createElement("form");
-        deleteForm.appendChild(deleteBeer);
-        deleteForm.appendChild(id);
-        deleteForm.method = "POST";
-        deleteForm.action = `/deleteBeer/${beer.id}`;
-
-        deleteBeer.onclick = function(event) {
+        deleteBtn.onclick = async function(event) {
             event.preventDefault();
-            if(confirm(`Are you sure you want to delete ${beer.name}?`)){
-                deleteForm.submit();
+            if (!confirm(`Are you sure you want to delete ${beer.name}?`)) return;
+            try {
+                const res = await fetch(`/deleteBeer/${beer.id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    alert('Beer deleted successfully');
+                    window.location.href = 'index.html';
+                } else {
+                    alert('Failed to delete beer. Please try again.');
+                }
+            } catch (err) {
+                console.error('Delete failed', err);
+                alert('Failed to delete beer. Please try again.');
             }
         };
 
@@ -104,14 +108,28 @@ function displayBeers(beers){
         li.appendChild(type);
         li.appendChild(location);
         li.appendChild(date);
+        li.appendChild(details);
         li.appendChild(edit);
-        li.appendChild(deleteForm);
+        li.appendChild(deleteBtn);
         li.appendChild(br);
 
         li.setAttribute("class", "beer-item");
 
         ul.appendChild(li);
     })
+}
+
+function setBeerImage(image, beerImage, beerName) {
+    const placeholder = '/img/placeholder.png';
+    const imagePath = beerImage ? `/img/${encodeURIComponent(beerImage)}` : placeholder;
+
+    image.onerror = () => {
+        image.onerror = null;
+        image.src = placeholder;
+    };
+
+    image.src = imagePath;
+    image.alt = beerName;
 }
 
 function sortBy(beers, sortOption){

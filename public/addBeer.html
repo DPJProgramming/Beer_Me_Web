@@ -3,59 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>new Beer</title>
+    <title>Add a Beer 🍺</title>
+    <link rel="stylesheet" href="./styles/styles.css">
     <script type="module" src="./scripts/addBeer.js" defer></script>
 </head>
 <body>
-    <H1> Add a new Beer</H1>
-    <button type="button" onclick="window.location.href='index.html'">Home</button>
 
-    <form id="newBeerForm" enctype="multipart/form-data">
-        <label for="name">Name:</label>
-        <span id="nameRequired" style="color: red;">*</span>
-        <input type="text" id="name" name="name">
-        <span id="nameValid" style="color: red;"></span>
-        <br><br>
+    <div class="page-header">
+        <div>
+            <h1>Add a Beer</h1>
+            <p class="text-muted" style="margin-top:4px; font-size:0.9rem;">Crack one open and log it</p>
+        </div>
+    </div>
 
-        <label for="type">Type:</label>
-        <span id="typeRequired" style="color: red;">*</span>
-        <input type="text" id="type" name="type">
-        <span id="typeValid" style="color: red;"></span>
-        <br><br>
+    <div class="container">
 
-        <label for="rating">Rating:</label>
-        <span id="ratingRequired" style="color: red;">*</span>
-        <input type="number" id="rating" name="rating"> 
-        <span id="ratingValid" style="color: red;"></span>
-        <br><br>
+        <div class="nav-row">
+            <button type="button" onclick="window.location.href='index.html'">← Home</button>
+        </div>
 
-        <label for="brewery">Brewery:</label>
-        <input type="text" id="brewery" name="brewery">
-        <br><br>
+        <form id="newBeerForm" enctype="multipart/form-data">
 
-        <label for="description">Description:</label>
-        <textarea id="description" name="description"></textarea>
-        <br><br>
+            <div class="field">
+                <label for="name">Name <span class="required-star">*</span></label>
+                <input type="text" id="name" name="name" placeholder="e.g. Pliny the Elder">
+                <span id="nameValid" class="field-error"></span>
+            </div>
 
-        <label for="location">Location:</label>
-        <input type="text" id="location" name="location">
-        <br><br>
-            
-        <label for="upload">Upload or Take a Picture:</label>
-        <input type="file" id="image" name="image" accept="image/*">
-        <span id="imageValid" style="color: red;"></span>
-        <!-- <p>OR</p>
-        <label for="camera">Take a picture</label> 
-        <input type="file" id="camera" accept="image/*" name="image" capture="environment"> -->
+            <div class="field">
+                <label for="type">Type <span class="required-star">*</span></label>
+                <input type="text" id="type" name="type" placeholder="e.g. IPA, Stout, Lager…">
+                <span id="typeValid" class="field-error"></span>
+            </div>
 
-        <br>
-        <br>
+            <div class="field">
+                <label for="rating">Rating (1–5) <span class="required-star">*</span></label>
+                <input type="number" id="rating" name="rating" min="1" max="5" placeholder="1 – 5">
+                <span id="ratingValid" class="field-error"></span>
+            </div>
 
-        <input type="submit" value="Add Beer" id="submit">
-    </form>
+            <div class="field">
+                <label for="brewery">Brewery</label>
+                <input type="text" id="brewery" name="brewery" placeholder="Who brewed this beauty?">
+            </div>
 
-    <br>
+            <div class="field">
+                <label for="description">Tasting Notes</label>
+                <textarea id="description" name="description" placeholder="What does it taste like? Any notes?"></textarea>
+            </div>
 
-    <button type="button" onclick="window.location.href='index.html'">Cancel</button>
+            <div class="field">
+                <label for="location">Where'd you have it?</label>
+                <input type="text" id="location" name="location" placeholder="Bar name, city, event…">
+            </div>
+
+            <div class="field">
+                <label for="image">Photo</label>
+                <input type="file" id="image" name="image" accept="image/*">
+                <span id="imageValid" class="field-error"></span>
+            </div>
+
+            <div class="form-actions">
+                <input type="submit" value="🍺 Add Beer" id="submit">
+                <button type="button" onclick="window.location.href='index.html'">Cancel</button>
+            </div>
+
+        </form>
+    </div>
+
 </body>
 </html>

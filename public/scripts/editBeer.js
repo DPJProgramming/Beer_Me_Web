@@ -1,5 +1,18 @@
 import validate from './validation.js';
 
+function setBeerImage(image, beerImage, beerName) {
+    const placeholder = '/img/placeholder.png';
+    const imagePath = beerImage ? `/img/${encodeURIComponent(beerImage)}` : placeholder;
+
+    image.onerror = () => {
+        image.onerror = null;
+        image.src = placeholder;
+    };
+
+    image.src = imagePath;
+    image.alt = beerName;
+}
+
 window.onload = async () => {
     
     //get beer id from url
@@ -59,7 +72,8 @@ async function fillFormData(beerId) {
         document.getElementById('description').value = beer.description || '';
         document.getElementById('location').value = beer.location || '';
         document.getElementById('rating').value = beer.rating || '';
-        document.getElementById('currentImage').src = `img/${beer.image}` || 'img/placeholder.png';
+        const currentImageElement = document.getElementById('currentImage');
+        setBeerImage(currentImageElement, beer.image, beer.name);
         document.getElementById('date').innerHTML = beer.date || '';
 
         document.getElementById('submit').value = 'Update Beer';

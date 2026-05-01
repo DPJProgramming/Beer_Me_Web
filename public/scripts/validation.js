@@ -1,16 +1,16 @@
 function formValidate(beer, spans) {
     let isValid = true;
 
-    if(!validate.name(beer.get("name"), spans.name)){
+    if(!name(beer.get("name"), spans.name)){
         isValid = false;
     }
-    if(!validate.type(beer.get("type"), spans.type)){
+    if(!type(beer.get("type"), spans.type)){
         isValid = false;
     }
-    if(!validate.rating(beer.get("rating"), spans.rating)){
+    if(!rating(beer.get("rating"), spans.rating)){
         isValid = false;
     }
-    if(!validate.image(document.getElementById("image"), spans.image)){
+    if(!image(document.getElementById("image"), spans.image)){
         isValid = false;
     }
 
