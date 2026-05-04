@@ -20,10 +20,5 @@ logs/
 *.log
 npm-debug.log*
 
-#aws
-oac.json
-policy.json
-
-#misc
-/resources
-
+# Vim
+.nvim*

@@ -1,131 +1,125 @@
-import fs from 'fs';
-import Database from 'better-sqlite3';
+import initSqlJs from 'sql.js';
+import { sqlAll, sqlRun, sqlGet, s3Command } from './utils.js';
 
-//without logging SQL queries
-const db = new Database('./data/beers.db');
+const LAMBDA_URL = import.meta.env.VITE_LAMBDA_URL;
 
-//to log all SQL queries when in development mode
-//const db = new Database('./data/beers.db', { verbose: console.log });
+export let db;
 
-const getAllBeers = async () => {
-    const result = db.prepare('SELECT * FROM beers ORDER BY date DESC');
-    const allBeers = result.all();
-    
-    return allBeers;
-}
+export const initDb = async () => {
+    const SQL = await initSqlJs();
+    const res = await fetch(`${LAMBDA_URL}/initDb`);
+    const { db: b64 } = await res.json();
 
-const getTopBeers = async () => {
-    const result = db.prepare('SELECT * FROM beers ORDER BY rating DESC LIMIT 10');
-    const topBeers = result.all();
+    if (b64) {
+        const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        db = new SQL.Database(bytes);
+    } else {
+        db = new SQL.Database();
+        db.run(`
+            CREATE TABLE IF NOT EXISTS beers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                brewery TEXT,
+                type TEXT,
+                subType TEXT,
+                description TEXT,
+                rating REAL CHECK(rating >= 0 AND rating <= 5),
+                date TEXT CHECK(date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+                updatedDate TEXT CHECK(updatedDate GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+                image TEXT,
+                location TEXT,
+                deleted INTEGER NOT NULL DEFAULT 0
+            )
+        `);
+    }
+};
 
-    return topBeers;
-}
+export const commitDb = async () => {
+    const data = db.export();
+    let binary = '';
+    for (let i = 0; i < data.length; i++) binary += String.fromCharCode(data[i]);
 
-const addBeer = async (beer) => {
-    const query = `INSERT INTO beers ( name, type, brewery, description, 
-                                       location, rating, image, date
-                                     )
-                   VALUES (?,?,?,?,?,?,?,?)`;
-    const prepare = db.prepare(query)
-    const result = prepare.run( 
-                                beer.name, beer.type, beer.brewery, beer.description, 
-                                beer.location, beer.rating, beer.image, beer.date,
-                              );
-    
-    return {...result, image: beer.image, id: result.lastInsertRowid};
-}
+    await fetch(`${LAMBDA_URL}/commitDb`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ db: btoa(binary) }),
+    });
+};
 
-const getBeerById = (id) => {
-    const query = `SELECT * FROM beers WHERE id = ?`;
+export const getAllBeers = () => {
+    return sqlAll(db, 'SELECT * FROM beers ORDER BY date DESC');
+};
 
-    const prepare = db.prepare(query);
-    const beer = prepare.get(id);
+export const getTopBeers = () => {
+    return sqlAll(db, 'SELECT * FROM beers ORDER BY rating DESC LIMIT 10');
+};
 
-    return beer;
-}
+export const getBeerById = (id) => {
+    return sqlGet(db, 'SELECT * FROM beers WHERE id = ?', [id]);
+};
 
-const editBeer = (beer) => {
-    let result;
+export const getImageById = (id) => {
+    const row = sqlGet(db, 'SELECT image FROM beers WHERE id = ?', [id]);
+    return row ? row.image : null;
+};
 
-    //check if user has defined a new image
-    if(beer.image){
+export const addBeer = async (beer) => {
+    const query = `
+        INSERT INTO beers (name, type, brewery, description, location, rating, image, date)
+        VALUES (?,?,?,?,?,?,?,?)
+    `;
+    return sqlRun(db, query, [
+        beer.name, beer.type, beer.brewery, beer.description,
+        beer.location, beer.rating, beer.image, beer.date,
+    ]);
+};
+
+export const editBeer = async (beer) => {
+    if (beer.image) {
         const existingImage = getImageById(beer.id);
+        const query = `
+            UPDATE beers
+            SET name = ?, type = ?, brewery = ?, description = ?,
+                location = ?, rating = ?, image = ?, updatedDate = ?
+            WHERE id = ?
+        `;
+        const result = sqlRun(db, query, [
+            beer.name, beer.type, beer.brewery, beer.description,
+            beer.location, beer.rating, beer.image, beer.updatedDate, beer.id,
+        ]);
 
-        const query =  `UPDATE beers 
-                        SET name = ?, type = ?, brewery = ?, description = ?, location = ?, 
-                           rating = ?, image = ?, updatedDate = ?
-                        WHERE id = ?`;
-
-        const prepare = db.prepare(query);
-        result = prepare.run( 
-                                beer.name, beer.type, beer.brewery, beer.description, 
-                                beer.location, beer.rating, beer.image, beer.updatedDate,beer.id
-                            );
-        
-        const image = beer.image || existingImage;
-
-        //delete old image file if it's not the placeholder
-        if(image != 'placeholder.png' && image != beer.image){
-            fs.promises.unlink(`./public/img/${image}`);
+        if (existingImage && existingImage !== 'placeholder.png' && existingImage !== beer.image) {
+            await s3Command('delete', existingImage);
         }
 
-        return {...result, image: image, updatedDate: beer.updatedDate};
+        return { ...result, image: beer.image, updatedDate: beer.updatedDate };
+    } else {
+        const query = `
+            UPDATE beers
+            SET name = ?, type = ?, brewery = ?, description = ?,
+                location = ?, rating = ?, updatedDate = ?
+            WHERE id = ?
+        `;
+        const result = sqlRun(db, query, [
+            beer.name, beer.type, beer.brewery, beer.description,
+            beer.location, beer.rating, beer.updatedDate, beer.id,
+        ]);
+        return { ...result, updatedDate: beer.updatedDate };
     }
-    else{
-        const query = `UPDATE beers 
-                       SET name = ?, type = ?, brewery = ?, description = ?, location = ?, 
-                           rating = ?, updatedDate = ?
-                       WHERE id = ?`;
+};
 
-        const prepare = db.prepare(query);
-        result = prepare.run( 
-                                beer.name, beer.type, beer.brewery, beer.description, 
-                                beer.location, beer.rating, beer.updatedDate, beer.id
-                            );
-        return {...result, updatedDate: beer.updatedDate};
-    }
-}
-
-const deleteBeer = async (id) => {
-    //fetchimage file
+export const deleteBeer = async (id) => {
     const image = getImageById(id);
+    const result = sqlRun(db, 'DELETE FROM beers WHERE id = ?', [id]);
 
-    //delete beer from database
-    const query = `DELETE FROM beers WHERE id = ?`;
-    const prepare = db.prepare(query);
-    const runDelete = prepare.run(id);
-
-    //remove image file if it's not the placeholder
-    if(image && image != 'placeholder.png'){ 
-        try{
-            await fs.promises.unlink(`./public/img/${image}`);
-        } 
-        catch (error) {
-            console.error('Error deleting image file:', error);
+    if (image && image !== 'placeholder.png') {
+        try {
+            await s3Command('delete', image);
+        } catch (error) {
+            console.error('Error deleting image:', error);
         }
     }
 
-    if(runDelete.changes === 0){
-        console.log(`No beer found with id ${id}`);
-        return {ok: false, message: 'Beer not found'};
-    }
-
-    return {ok: true, message: 'Beer deleted successfully'};
-}
-
-const getImageById = (id) => {
-    const query = `SELECT image FROM beers WHERE id = ?`
-    const prepare = db.prepare(query);
-    const image = prepare.get(id);
-
-    return image ? image.image : null;
-}
-
-export default {
-    getAllBeers,
-    addBeer,
-    getBeerById,
-    editBeer,
-    deleteBeer,
-    getTopBeers
-}
+    if (result.changes === 0) return { ok: false, message: 'Beer not found' };
+    return { ok: true, message: 'Beer deleted successfully' };
+};
