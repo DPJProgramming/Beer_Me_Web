@@ -1,0 +1,47 @@
+Beer-Me-Web Notes
+
+--origin-access-control      ---------------------------------------------------    
+{                                                                                             
+    "Location": "https://cloudfront.amazonaws.com/2020-05-31/origin-access-control/E1Z5IZQ7TRGY7A",
+    "ETag": "ETVPDKIKX0DER",
+    "OriginAccessControl": {
+        "Id": "E1Z5IZQ7TRGY7A",
+        "OriginAccessControlConfig": {
+            "Name": "beer-me-web",
+            "Description": "",
+            "SigningProtocol": "sigv4",
+            "SigningBehavior": "always",
+            "OriginAccessControlOriginType": "s3"
+        }
+      }
+    }
+}
+
+bucket policy from cloudfront distrinbution-----------------------------
+{
+        "Version": "2008-10-17",
+        "Id": "PolicyForCloudFrontPrivateContent",
+        "Statement": [
+            {
+                "Sid": "AllowCloudFrontServicePrincipal",
+                "Effect": "Allow",
+                "Principal": {
+                    "Service": "cloudfront.amazonaws.com"
+                },
+                "Action": "s3:GetObject",
+                "Resource": "arn:aws:s3:::beer-me-web/*",
+                "Condition": {
+                    "StringEquals": {
+                      "AWS:SourceArn": "arn:aws:cloudfront::523835807859:distribution/E1SIY218EFYZ5Z"
+                    }
+                }
+            }
+        ]
+      }
+
+
+empty bucket-------------------------------------
+
+		aws s3 rm s3://beer-me-web --recursive
+
+-----------------------------------------------------------------------------

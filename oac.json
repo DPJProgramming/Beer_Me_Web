@@ -1,0 +1,7 @@
+{
+  "Name": "beer-me-web",
+  "OriginAccessControlOriginType": "s3",
+  "SigningBehavior": "always",
+  "SigningProtocol": "sigv4",
+  "Description": ""
+}
