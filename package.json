@@ -15,11 +15,12 @@
     "url": ""
   },
   "scripts": {
-    "postinstall": "node setup.js",
+    "postinstall": "node -e \"if((process.env.DB_TYPE||'sqlite').toLowerCase()==='sqlite') require('./setup.js')\"",
     "start": "nodemon server.js"
   },
   "dependencies": {
     "better-sqlite3": "^12.2.0",
+    "mysql2": "^3.3.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "fs": "^0.0.1-security",

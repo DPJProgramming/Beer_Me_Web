@@ -1,14 +1,15 @@
+-- MySQL schema for `beers` table
 CREATE TABLE IF NOT EXISTS beers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    brewery TEXT,
-    type TEXT,
-    subType TEXT,
+    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    brewery VARCHAR(255),
+    type VARCHAR(100),
+    subType VARCHAR(100),
     description TEXT,
-    rating REAL CHECK(rating >= 0 AND rating <= 5),
-    date TEXT CHECK(date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
-    updatedDate TEXT CHECK(updatedDate GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
-    image TEXT,
-    location TEXT,
-    deleted INTEGER NOT NULL DEFAULT 0
-);
+    rating DECIMAL(2,1) CHECK (rating >= 0 AND rating <= 5),
+    date DATE,
+    updatedDate DATE,
+    image VARCHAR(255),
+    location VARCHAR(255),
+    deleted TINYINT(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

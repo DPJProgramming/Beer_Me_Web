@@ -3,16 +3,16 @@ resource "aws_cloudfront_origin_access_identity" "s3_oai" {
 }
 
 resource "aws_cloudfront_distribution" "main" {
-  enabled            = true
+  enabled             = true
   default_root_object = "public/index.html"
-  
- origin {
-  origin_id   = "s3"
-  domain_name = aws_s3_bucket.frontend.bucket_regional_domain_name  # ← use this instead of hardcoded
-  s3_origin_config {
-    origin_access_identity = aws_cloudfront_origin_access_identity.s3_oai.cloudfront_access_identity_path
+
+  origin {
+    origin_id   = "s3"
+    domain_name = aws_s3_bucket.frontend.bucket_regional_domain_name # ← use this instead of hardcoded
+    s3_origin_config {
+      origin_access_identity = aws_cloudfront_origin_access_identity.s3_oai.cloudfront_access_identity_path
+    }
   }
-}
 
   origin {
     origin_id   = "api"

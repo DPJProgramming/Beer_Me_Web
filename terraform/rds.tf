@@ -1,5 +1,5 @@
 resource "aws_db_subnet_group" "main" {
-  name       = "main-subnet-group"
+  name = "main-subnet-group"
   # TODO: Provide public_subnet_ids in terraform.tfvars
   # Get from: AWS Console > VPC > Subnets (select your public subnets)
   subnet_ids = var.public_subnet_ids
@@ -34,6 +34,16 @@ resource "aws_security_group" "rds" {
     protocol        = "tcp"
     security_groups = [aws_security_group.lambda.id]
   }
+
+  dynamic "ingress" {
+    for_each = var.rds_allowed_cidr_blocks
+    content {
+      from_port   = 3306
+      to_port     = 3306
+      protocol    = "tcp"
+      cidr_blocks = [ingress.value]
+    }
+  }
 }
 resource "aws_db_instance" "mysql" {
   identifier             = "myapp-mysql"
@@ -47,6 +57,6 @@ resource "aws_db_instance" "mysql" {
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [aws_security_group.rds.id]
   skip_final_snapshot    = true
-  publicly_accessible    = false  
+  publicly_accessible    = var.rds_publicly_accessible
 
 }

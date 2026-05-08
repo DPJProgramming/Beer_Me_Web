@@ -30,3 +30,14 @@ variable "db_password" {
   sensitive = true
   # Use: terraform.tfvars with db_password = "your-secure-password"
 }
+
+# Temporary dev access controls for loading schema/seed and using SQL tools.
+variable "rds_publicly_accessible" {
+  type    = bool
+  default = true
+}
+
+variable "rds_allowed_cidr_blocks" {
+  type    = list(string)
+  default = ["0.0.0.0/0"]
+}

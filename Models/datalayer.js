@@ -1,125 +1,81 @@
 import fs from 'fs';
-import Database from 'better-sqlite3';
+import mysql from 'mysql2/promise';
 
-//without logging SQL queries
-const db = new Database('./data/beers.db');
-
-//to log all SQL queries when in development mode
-//const db = new Database('./data/beers.db', { verbose: console.log });
+const pool = mysql.createPool({
+    host: process.env.DB_HOST || 'myapp-mysql.c4zoaaw22k3n.us-east-1.rds.amazonaws.com',
+    user: process.env.DB_USER || 'admin',
+    password: process.env.DB_PASSWORD || '#1Powerpeople1!',
+    database: process.env.DB_NAME || 'Beer_Me_Web_MySql',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+});
 
 const getAllBeers = async () => {
-    const result = db.prepare('SELECT * FROM beers ORDER BY date DESC');
-    const allBeers = result.all();
-    
-    return allBeers;
-}
+    const [rows] = await pool.query('SELECT * FROM beers ORDER BY date DESC');
+    return rows;
+};
 
 const getTopBeers = async () => {
-    const result = db.prepare('SELECT * FROM beers ORDER BY rating DESC LIMIT 10');
-    const topBeers = result.all();
-
-    return topBeers;
-}
+    const [rows] = await pool.query('SELECT * FROM beers ORDER BY rating DESC LIMIT 10');
+    return rows;
+};
 
 const addBeer = async (beer) => {
-    const query = `INSERT INTO beers ( name, type, brewery, description, 
-                                       location, rating, image, date
-                                     )
-                   VALUES (?,?,?,?,?,?,?,?)`;
-    const prepare = db.prepare(query)
-    const result = prepare.run( 
-                                beer.name, beer.type, beer.brewery, beer.description, 
-                                beer.location, beer.rating, beer.image, beer.date,
-                              );
-    
-    return {...result, image: beer.image, id: result.lastInsertRowid};
-}
+    const sql = `INSERT INTO beers (name, type, brewery, description, location, rating, image, date)
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+    const [result] = await pool.execute(sql, [
+        beer.name, beer.type, beer.brewery, beer.description,
+        beer.location, beer.rating, beer.image, beer.date,
+    ]);
+    return { insertId: result.insertId, image: beer.image, id: result.insertId };
+};
 
-const getBeerById = (id) => {
-    const query = `SELECT * FROM beers WHERE id = ?`;
+const getBeerById = async (id) => {
+    const [rows] = await pool.query('SELECT * FROM beers WHERE id = ?', [id]);
+    return rows[0] || null;
+};
 
-    const prepare = db.prepare(query);
-    const beer = prepare.get(id);
+const editBeer = async (beer) => {
+    if (beer.image) {
+        const [existing] = await pool.query('SELECT image FROM beers WHERE id = ?', [beer.id]);
+        const existingImage = existing[0] ? existing[0].image : null;
 
-    return beer;
-}
+        const sql = `UPDATE beers SET name=?, type=?, brewery=?, description=?, location=?, rating=?, image=?, updatedDate=? WHERE id=?`;
+        const [result] = await pool.execute(sql, [
+            beer.name, beer.type, beer.brewery, beer.description,
+            beer.location, beer.rating, beer.image, beer.updatedDate, beer.id,
+        ]);
 
-const editBeer = (beer) => {
-    let result;
-
-    //check if user has defined a new image
-    if(beer.image){
-        const existingImage = getImageById(beer.id);
-
-        const query =  `UPDATE beers 
-                        SET name = ?, type = ?, brewery = ?, description = ?, location = ?, 
-                           rating = ?, image = ?, updatedDate = ?
-                        WHERE id = ?`;
-
-        const prepare = db.prepare(query);
-        result = prepare.run( 
-                                beer.name, beer.type, beer.brewery, beer.description, 
-                                beer.location, beer.rating, beer.image, beer.updatedDate,beer.id
-                            );
-        
         const image = beer.image || existingImage;
-
-        //delete old image file if it's not the placeholder
-        if(image != 'placeholder.png' && image != beer.image){
-            fs.promises.unlink(`./public/img/${image}`);
+        if (image && image !== 'placeholder.png' && image !== existingImage) {
+            try { await fs.promises.unlink(`./public/img/${existingImage}`); } catch (e) {}
         }
 
-        return {...result, image: image, updatedDate: beer.updatedDate};
+        return { affectedRows: result.affectedRows, image, updatedDate: beer.updatedDate };
+    } else {
+        const sql = `UPDATE beers SET name=?, type=?, brewery=?, description=?, location=?, rating=?, updatedDate=? WHERE id=?`;
+        const [result] = await pool.execute(sql, [
+            beer.name, beer.type, beer.brewery, beer.description,
+            beer.location, beer.rating, beer.updatedDate, beer.id,
+        ]);
+        return { affectedRows: result.affectedRows, updatedDate: beer.updatedDate };
     }
-    else{
-        const query = `UPDATE beers 
-                       SET name = ?, type = ?, brewery = ?, description = ?, location = ?, 
-                           rating = ?, updatedDate = ?
-                       WHERE id = ?`;
-
-        const prepare = db.prepare(query);
-        result = prepare.run( 
-                                beer.name, beer.type, beer.brewery, beer.description, 
-                                beer.location, beer.rating, beer.updatedDate, beer.id
-                            );
-        return {...result, updatedDate: beer.updatedDate};
-    }
-}
+};
 
 const deleteBeer = async (id) => {
-    //fetchimage file
-    const image = getImageById(id);
+    const [rows] = await pool.query('SELECT image FROM beers WHERE id = ?', [id]);
+    const image = rows[0] ? rows[0].image : null;
 
-    //delete beer from database
-    const query = `DELETE FROM beers WHERE id = ?`;
-    const prepare = db.prepare(query);
-    const runDelete = prepare.run(id);
+    const [result] = await pool.execute('DELETE FROM beers WHERE id = ?', [id]);
 
-    //remove image file if it's not the placeholder
-    if(image && image != 'placeholder.png'){ 
-        try{
-            await fs.promises.unlink(`./public/img/${image}`);
-        } 
-        catch (error) {
-            console.error('Error deleting image file:', error);
-        }
+    if (image && image !== 'placeholder.png') {
+        try { await fs.promises.unlink(`./public/img/${image}`); } catch (e) { console.error(e); }
     }
 
-    if(runDelete.changes === 0){
-        console.log(`No beer found with id ${id}`);
-        return {ok: false, message: 'Beer not found'};
-    }
-
-    return {ok: true, message: 'Beer deleted successfully'};
-}
-
-const getImageById = (id) => {
-    const query = `SELECT image FROM beers WHERE id = ?`
-    const prepare = db.prepare(query);
-    const image = prepare.get(id);
-
-    return image ? image.image : null;
-}
+    if (result.affectedRows === 0) return { ok: false, message: 'Beer not found' };
+    return { ok: true, message: 'Beer deleted successfully' };
+};
 
 export default {
     getAllBeers,
@@ -127,5 +83,5 @@ export default {
     getBeerById,
     editBeer,
     deleteBeer,
-    getTopBeers
-}
+    getTopBeers,
+};

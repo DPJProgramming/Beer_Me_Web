@@ -5,7 +5,7 @@ resource "aws_lambda_function" "api" {
   source_code_hash = filebase64sha256("../function.zip")
   function_name    = "myapp-api"
   role             = aws_iam_role.lambda_exec.arn
-  handler          = "handler.handler"  # File: handler.js, Function: handler
+  handler          = "handler.handler" # File: handler.js, Function: handler
   runtime          = "nodejs20.x"
   timeout          = 30
 
@@ -16,11 +16,11 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      DB_HOST     = aws_db_instance.mysql.address
-      DB_USER     = var.db_username
-      DB_NAME     = var.db_name
+      DB_HOST       = aws_db_instance.mysql.address
+      DB_USER       = var.db_username
+      DB_NAME       = var.db_name
       DB_SECRET_ARN = aws_secretsmanager_secret.db_password.arn
-      NODE_ENV    = "production"
+      NODE_ENV      = "production"
     }
   }
 }

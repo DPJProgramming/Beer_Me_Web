@@ -30,3 +30,8 @@ db_username = "admin"
 
 # Optional - change region if deploying elsewhere
 aws_region = "us-east-1"
+
+# Temporary dev access to let you connect with SQL tools and import schema/seed.
+# Set to false after you are done importing.
+rds_publicly_accessible = true
+rds_allowed_cidr_blocks = ["0.0.0.0/0"]
