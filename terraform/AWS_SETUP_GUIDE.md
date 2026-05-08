@@ -44,15 +44,15 @@ If you want to serve static files via CloudFront:
 
 1. Create an S3 bucket:
    ```bash
-   aws s3 mb s3://beer-me-web-static --region us-east-1
+   aws s3 mb s3://your-static-bucket-name --region us-east-1
    ```
 
 2. Get your bucket domain name:
-   - Format: `beer-me-web-static.s3.amazonaws.com`
+   - Format: `your-static-bucket-name.s3.amazonaws.com`
 
 3. In `terraform/cloudfront.tf`, update the origin:
    ```hcl
-   domain_name = "beer-me-web-static.s3.amazonaws.com"
+   domain_name = "your-static-bucket-name.s3.amazonaws.com"
    ```
 
 ## Step 4: Create CloudFront Origin Access Identity (OAI) - Optional
@@ -119,7 +119,7 @@ export AWS_DEFAULT_REGION="us-east-1"
 
 2. Edit `terraform/terraform.tfvars` with your values:
    ```hcl
-   vpc_id = "vpc-0cfb54f4382c80e48"
+   vpc_id = "vpc-xxxxxxxxxxxxxxxxx"
    public_subnet_ids = ["subnet-12345678", "subnet-87654321"]
    db_password = "YourSecurePasswordHere"
    ```

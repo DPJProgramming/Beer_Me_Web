@@ -5,7 +5,7 @@ variable "aws_region" {
 
 # TODO: Replace with your actual VPC ID from AWS Console
 variable "vpc_id" {
-  default = "vpc-0cfb54f4382c80e48"  
+  default = "vpc-xxxxxxxxxxxxxxxxx"
 }
 
 # TODO: Replace with your actual public subnet IDs from AWS Console
@@ -17,11 +17,11 @@ variable "public_subnet_ids" {
 
 # Database configuration - customize as needed
 variable "db_name" {
-  default = "myapp"
+  default = "your-db-name"
 }
 
 variable "db_username" {
-  default = "admin"
+  default = "your-db-username"
 }
 
 # TODO: Set this via terraform.tfvars or environment variable

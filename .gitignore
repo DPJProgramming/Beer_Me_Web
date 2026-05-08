@@ -36,9 +36,9 @@ terraform/override.tf
 terraform/override.tf.json
 terraform/*_override.tf
 terraform/*_override.tf.json
+function.zip
 # Keep the example file for reference
 !terraform/*.tfvars.example
-terraform/secrets.tf
 
 #misc
 /resources
