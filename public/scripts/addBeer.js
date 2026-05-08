@@ -32,7 +32,7 @@ async function addBeer(newBeer){
         mode: "cors",
         body: newBeer
     }
-    const response = await fetch('/addBeer', config);
+    const response = await fetch('/api/addBeer', config);
 
     console.log(response);
 

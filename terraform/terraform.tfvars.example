@@ -1,0 +1,32 @@
+# Terraform Variables Template
+# 
+# INSTRUCTIONS:
+# 1. Copy this file to terraform.tfvars: cp terraform.tfvars.example terraform.tfvars
+# 2. Fill in ALL values below with your AWS account information
+# 3. NEVER commit terraform.tfvars to git (it's in .gitignore)
+#
+# HOW TO GET THESE VALUES:
+# See AWS_SETUP_GUIDE.md for detailed instructions
+
+# Get from: AWS Console > VPC > Your VPCs
+vpc_id = "vpc-xxxxxxxxx"
+
+# Get from: AWS Console > VPC > Subnets (filter by your VPC, select public subnets)
+# Must be at least 2 subnets in different availability zones
+public_subnet_ids = [
+  "subnet-xxxxxxxx",
+  "subnet-yyyyyyyy"
+]
+
+# Database password - use a strong, secure password
+# This will be stored in AWS Secrets Manager
+db_password = "YourSecurePasswordHere"
+
+# Optional - customize database name if needed
+db_name = "myapp"
+
+# Optional - customize database username if needed
+db_username = "admin"
+
+# Optional - change region if deploying elsewhere
+aws_region = "us-east-1"

@@ -13,7 +13,7 @@ window.onload = async () => {
 
 async function loadBeerDetails(beerId) {
     try {
-        const response = await fetch(`/getBeer/${beerId}`);
+        const response = await fetch(`/api/getBeer/${beerId}`);
         
         if (!response.ok) {
             throw new Error('Beer not found');
@@ -71,7 +71,7 @@ window.deleteBeer = async function() {
 
     if (confirm('Are you sure you want to delete this beer?')) {
         try {
-            const response = await fetch(`/deleteBeer/${window.currentBeerId}`, {
+            const response = await fetch(`/api/deleteBeer/${window.currentBeerId}`, {
                 method: 'DELETE'
             });
 

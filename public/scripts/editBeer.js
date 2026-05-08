@@ -56,7 +56,7 @@ async function fillFormData(beerId) {
 
     try {
         // Fetch beer data from backend
-        const response = await fetch(`/getBeer/${beerId}`);
+        const response = await fetch(`/api/getBeer/${beerId}`);
         
         if (!response.ok) {
             throw new Error('Beer not found');
@@ -92,7 +92,7 @@ async function submitEditBeer(editedBeer) {
         body: editedBeer
     }
 
-    const result = await fetch('/editBeer', config);
+    const result = await fetch('/api/editBeer', config);
 
     if(result.ok){
         alert('Beer updated successfully');

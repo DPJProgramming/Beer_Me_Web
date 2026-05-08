@@ -24,6 +24,22 @@ npm-debug.log*
 oac.json
 policy.json
 
+# Terraform: keep configuration tracked, ignore generated/local/sensitive artifacts
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/*.tfvars
+terraform/*.tfvars.json
+terraform/*.backup
+terraform/crash.log
+terraform/override.tf
+terraform/override.tf.json
+terraform/*_override.tf
+terraform/*_override.tf.json
+# Keep the example file for reference
+!terraform/*.tfvars.example
+terraform/secrets.tf
+
 #misc
 /resources
 

@@ -4,7 +4,7 @@ window.onload = async () => {
         method:"get",
         mode: "cors"
     }
-    const response = await fetch('/allBeers', config);
+    const response = await fetch('/api/allBeers', config);
     const beers = await response.json();
     displayBeers(beers);
 
@@ -77,7 +77,7 @@ function displayBeers(beers){
             event.preventDefault();
             if (!confirm(`Are you sure you want to delete ${beer.name}?`)) return;
             try {
-                const res = await fetch(`/deleteBeer/${beer.id}`, { method: 'DELETE' });
+                const res = await fetch(`/api/deleteBeer/${beer.id}`, { method: 'DELETE' });
                 if (res.ok) {
                     alert('Beer deleted successfully');
                     window.location.href = 'index.html';
