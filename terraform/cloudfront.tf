@@ -4,7 +4,7 @@ resource "aws_cloudfront_origin_access_identity" "s3_oai" {
 
 resource "aws_cloudfront_distribution" "main" {
   enabled             = true
-  default_root_object = "public/index.html"
+  default_root_object = "index.html"
 
   origin {
     origin_id   = "s3"

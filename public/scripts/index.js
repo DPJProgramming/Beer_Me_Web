@@ -1,5 +1,19 @@
 let allBeers = [];
 
+// Helpers to handle null/undefined/'null' values from the DB
+function displayOr(value, fallback) {
+    if (value === null || value === undefined) return fallback;
+    if (typeof value === 'string' && (value.trim() === '' || value === 'null')) return fallback;
+    return value;
+}
+
+function safeString(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof value !== 'string') return String(value);
+    if (value === 'null') return '';
+    return value;
+}
+
 window.onload = async () => {
     const config = {
         method:"get",
@@ -49,22 +63,26 @@ function displayBeers(beers){
         image.style.margin = "10px 0";    
 
         const rating = document.createElement("span");
-        rating.innerText = `Rating: ${beer.rating}/5`;
+        if (beer.rating === null || beer.rating === undefined || beer.rating === 'null' || beer.rating === '') {
+            rating.innerText = "Rating: No rating, add one";
+        } else {
+            rating.innerText = `Rating: ${beer.rating}/5 `;
+        }
 
         const description = document.createElement("p");
-        description.innerText = beer.description;
+        description.innerText = displayOr(beer.description, "No description ");
 
         const brewery = document.createElement("span");
-        brewery.innerText = `Brewery: ${beer.brewery}`;
+        brewery.innerText = `Brewery: ${displayOr(beer.brewery, "I don't know ")} `;
 
         const type = document.createElement("span");
-        type.innerText = `Type: ${beer.type}`;
+        type.innerText = `Type: ${displayOr(beer.type, "None given ")} `;
 
         const location = document.createElement("span");
-        location.innerText = `Location: ${beer.location}`;
+        location.innerText = `Location: ${displayOr(beer.location, "Not specified ")} `;
 
         const date = document.createElement("span");
-        date.innerText = `Added on: ${beer.date}`;
+        date.innerText = `Added on: ${displayOr(beer.date, "I don't remember ")} `;
 
         const details = document.createElement("a");
         details.href = `/beerDetails.html?id=${beer.id}`;
@@ -130,7 +148,21 @@ function displayBeers(beers){
 
 function setBeerImage(image, beerImage, beerName) {
     const placeholder = '/img/placeholder.png';
-    const imagePath = beerImage ? `/img/${encodeURIComponent(beerImage)}` : placeholder;
+    if (!beerImage) {
+        image.src = placeholder;
+        image.alt = beerName;
+        return;
+    }
+
+    // Support stored values that are either "img/filename.png" (full key)
+    // or just "filename.png" (legacy). Use encodeURI for full paths to
+    // preserve the slash when present.
+    let imagePath;
+    if (typeof beerImage === 'string' && beerImage.startsWith('img/')) {
+        imagePath = '/' + encodeURI(beerImage); // becomes /img/xxx
+    } else {
+        imagePath = '/img/' + encodeURIComponent(beerImage);
+    }
 
     image.onerror = () => {
         image.onerror = null;
@@ -146,22 +178,22 @@ function sortBy(beers, sortOption){
 
     switch(sortOption){
         case "name":
-            sortedBeers = beers.sort((a, b) => a.name.localeCompare(b.name));
+            sortedBeers = beers.sort((a, b) => safeString(a.name).localeCompare(safeString(b.name)));
             break;
         case "rating":
-            sortedBeers = beers.sort((a, b) => b.rating - a.rating);
+            sortedBeers = beers.sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0));
             break;
         case "date asc":
-            sortedBeers = beers.sort((a, b) => new Date(a.date) - new Date(b.date));
+            sortedBeers = beers.sort((a, b) => (Date.parse(safeString(a.date)) || 0) - (Date.parse(safeString(b.date)) || 0));
             break;
         case "date desc":
-            sortedBeers = beers.sort((a, b) => new Date(b.date) - new Date(a.date));
+            sortedBeers = beers.sort((a, b) => (Date.parse(safeString(b.date)) || 0) - (Date.parse(safeString(a.date)) || 0));
             break;
         case "type":
-            sortedBeers = beers.sort((a, b) => a.type.localeCompare(b.type));
+            sortedBeers = beers.sort((a, b) => safeString(a.type).localeCompare(safeString(b.type)));
             break;
         case "brewery":
-            sortedBeers = beers.sort((a, b) => a.brewery.localeCompare(b.brewery));
+            sortedBeers = beers.sort((a, b) => safeString(a.brewery).localeCompare(safeString(b.brewery)));
             break;
         default:
             sortedBeers = beers;
@@ -182,9 +214,9 @@ function searchFor(beers, term){
     const searchTerm = term.toLowerCase().trim();
 
     let filteredBeers = beers.filter((beer) => 
-                     beer.name.toLowerCase().startsWith(searchTerm)
-                  || beer.type.toLowerCase().startsWith(searchTerm)
-                  || beer.brewery.toLowerCase().startsWith(searchTerm));
+                            safeString(beer.name).toLowerCase().startsWith(searchTerm)
+                        || safeString(beer.type).toLowerCase().startsWith(searchTerm)
+                        || safeString(beer.brewery).toLowerCase().startsWith(searchTerm));
 
     if(filteredBeers.length === 0){
         message.innerText = "No results";

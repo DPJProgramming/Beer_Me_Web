@@ -9,31 +9,21 @@ async function initializePool() {
 
   let password = process.env.DB_PASSWORD;
 
-  console.log('Initializing pool. DB_HOST:', process.env.DB_HOST, 'DB_USER:', process.env.DB_USER, 'DB_NAME:', process.env.DB_NAME, 'DB_SECRET_ARN:', process.env.DB_SECRET_ARN);
-
   if (process.env.DB_SECRET_ARN && !password) {
     try {
-      console.log('Retrieving secret from Secrets Manager...');
       const client = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
       const command = new GetSecretValueCommand({ SecretId: process.env.DB_SECRET_ARN });
       const response = await client.send(command);
-      // SecretString may be JSON or plain text; try to parse JSON
-      try {
-        const parsed = JSON.parse(response.SecretString);
-        password = parsed.password || parsed.db_password || response.SecretString;
-      } catch (e) {
-        password = response.SecretString;
-      }
-      console.log('Secret retrieved successfully');
+      // SecretString might be JSON or plain; assume plain password
+      password = response.SecretString;
     } catch (err) {
-      console.error('Error retrieving secret from Secrets Manager:', err.message);
+      console.error('Error retrieving secret from Secrets Manager:', err);
       password = process.env.DB_PASSWORD || '';
     }
   }
 
   password = password || process.env.DB_PASSWORD || '';
 
-  console.log('Creating MySQL connection pool...');
   pool = mysql.createPool({
     host: process.env.DB_HOST || 'myapp-mysql.c4zoaaw22k3n.us-east-1.rds.amazonaws.com',
     user: process.env.DB_USER || 'admin',
@@ -44,22 +34,13 @@ async function initializePool() {
     queueLimit: 0,
   });
 
-  console.log('MySQL pool created');
   return pool;
 }
 
 const getAllBeers = async () => {
-  try {
-    console.log('getAllBeers: Initializing pool...');
-    const db = await initializePool();
-    console.log('getAllBeers: Executing query...');
-    const [rows] = await db.query('SELECT * FROM beers ORDER BY date DESC');
-    console.log('getAllBeers: Query returned', rows.length, 'rows');
-    return rows;
-  } catch (err) {
-    console.error('getAllBeers error:', err.message, err.code);
-    throw err;
-  }
+  const db = await initializePool();
+  const [rows] = await db.query('SELECT * FROM beers ORDER BY date DESC');
+  return rows;
 };
 
 const getTopBeers = async () => {
@@ -72,8 +53,8 @@ const addBeer = async (beer) => {
   const db = await initializePool();
   const sql = `INSERT INTO beers (name, type, brewery, description, location, rating, image, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
   const [result] = await db.execute(sql, [
-    beer.name ?? null, beer.type ?? null, beer.brewery ?? null, beer.description ?? null,
-    beer.location ?? null, beer.rating ?? null, beer.image ?? null, beer.date ?? null,
+    beer.name, beer.type, beer.brewery, beer.description,
+    beer.location, beer.rating, beer.image, beer.date,
   ]);
   return { insertId: result.insertId, image: beer.image, id: result.insertId };
 };
@@ -93,8 +74,8 @@ const editBeer = async (beer) => {
 
     const sql = `UPDATE beers SET name=?, type=?, brewery=?, description=?, location=?, rating=?, image=?, updatedDate=? WHERE id=?`;
     const [result] = await db.execute(sql, [
-      beer.name ?? null, beer.type ?? null, beer.brewery ?? null, beer.description ?? null,
-      beer.location ?? null, beer.rating ?? null, beer.image ?? null, beer.updatedDate ?? null, beer.id ?? null,
+      beer.name, beer.type, beer.brewery, beer.description,
+      beer.location, beer.rating, beer.image, beer.updatedDate, beer.id,
     ]);
 
     const image = beer.image || existingImage;

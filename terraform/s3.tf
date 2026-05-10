@@ -38,3 +38,15 @@ resource "aws_s3_bucket_policy" "frontend" {
 
   depends_on = [aws_s3_bucket_public_access_block.frontend]
 }
+
+resource "aws_s3_bucket_cors_configuration" "frontend_cors" {
+  bucket = aws_s3_bucket.frontend.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["GET", "PUT", "POST", "HEAD", "DELETE"]
+    allowed_origins = ["*"]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
+  }
+}

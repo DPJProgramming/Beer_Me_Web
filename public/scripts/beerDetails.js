@@ -46,7 +46,18 @@ async function loadBeerDetails(beerId) {
 
 function setBeerImage(image, beerImage, beerName) {
     const placeholder = '/img/placeholder.png';
-    const imagePath = beerImage ? `/img/${encodeURIComponent(beerImage)}` : placeholder;
+    if (!beerImage) {
+        image.src = placeholder;
+        image.alt = beerName;
+        return;
+    }
+
+    let imagePath;
+    if (typeof beerImage === 'string' && beerImage.startsWith('img/')) {
+        imagePath = '/' + encodeURI(beerImage);
+    } else {
+        imagePath = '/img/' + encodeURIComponent(beerImage);
+    }
 
     image.onerror = () => {
         image.onerror = null;

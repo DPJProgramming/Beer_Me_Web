@@ -1,5 +1,5 @@
-import express from 'express';``
-import beerRouter from "./routers/beerRouter.js";
+import express from 'express';
+import beerRouter from "./Routers/beerRouter.js";
 import cors from 'cors';
 
 const app = express();
@@ -7,7 +7,7 @@ const app = express();
 app.use(cors({origin: "*"}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/', beerRouter);
+app.use('/api', beerRouter);
 app.use(express.static('public'));
 app.use('/public', express.static('public'));
 app.use('/img', express.static('public/img'));

@@ -6,8 +6,8 @@ resource "aws_lambda_function" "api" {
   function_name    = "myapp-api"
   role             = aws_iam_role.lambda_exec.arn
   handler          = "handler.handler" # File: handler.js, Function: handler
-  runtime          = "nodejs20.x"
-  timeout          = 30
+  runtime          = "nodejs22.x"
+  timeout          = 60
 
   vpc_config {
     subnet_ids         = var.public_subnet_ids
@@ -20,7 +20,8 @@ resource "aws_lambda_function" "api" {
       DB_USER       = var.db_username
       DB_NAME       = var.db_name
       DB_SECRET_ARN = aws_secretsmanager_secret.db_password.arn
-      NODE_ENV      = "production"
+NODE_ENV      = "production"
+      S3_BUCKET     = aws_s3_bucket.frontend.bucket
     }
   }
 }

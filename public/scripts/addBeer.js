@@ -27,23 +27,50 @@ function getFormSpans(form){
 
 async function addBeer(newBeer){    
     console.log("reached addBeer");
-    const config = {
-        method:"post",
-        mode: "cors",
-        body: newBeer
+    // If image file present, request presigned URL and upload directly to S3
+    const fileInput = document.querySelector('#image');
+    let imageKey = null;
+    if(fileInput && fileInput.files && fileInput.files.length > 0){
+        const file = fileInput.files[0];
+        // request presigned url
+        const resp = await fetch('/api/upload-url', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: file.name, contentType: file.type })
+        });
+
+        if(!resp.ok){
+            alert('Failed to get upload URL');
+            return;
+        }
+
+        const { key, url } = await resp.json();
+        // upload file directly to S3
+        const uploadResp = await fetch(url, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+        if(!uploadResp.ok){
+            alert('Failed to upload image to S3');
+            return;
+        }
+        imageKey = key;
     }
-    const response = await fetch('/api/addBeer', config);
 
-    console.log(response);
+    // Build payload (send JSON metadata)
+    const payload = {
+        name: newBeer.get('name'),
+        type: newBeer.get('type'),
+        rating: newBeer.get('rating'),
+        description: newBeer.get('description') || '',
+        image: imageKey || 'placeholder.png'
+    };
 
-    //TO DO:
-    //handle response
+    const response = await fetch('/api/addBeer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+
     if(response.ok){
         alert('Beer added successfully');
         window.location.href = 'index.html';
-    }
-    else{
-        alert('Failed to add beer. Please try again.');
+    } else {
+        const err = await response.json().catch(()=>({}));
+        alert('Failed to add beer: ' + (err.error || response.statusText));
     }
 }
 
