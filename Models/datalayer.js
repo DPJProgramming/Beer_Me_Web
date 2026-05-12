@@ -1,131 +1,128 @@
-import fs from 'fs';
-import mysql from 'mysql2/promise';
-import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import {
+  DynamoDBDocumentClient,
+  ScanCommand,
+  GetCommand,
+  PutCommand,
+  UpdateCommand,
+  DeleteCommand,
+} from "@aws-sdk/lib-dynamodb";
 
-let pool = null;
+let docClient = null;
 
-async function initializePool() {
-  if (pool) return pool;
+function initializeDynamoDB() {
+  if (docClient) return docClient;
 
-  let password = process.env.DB_PASSWORD;
-
-  console.log('Initializing pool. DB_HOST:', process.env.DB_HOST, 'DB_USER:', process.env.DB_USER, 'DB_NAME:', process.env.DB_NAME, 'DB_SECRET_ARN:', process.env.DB_SECRET_ARN);
-
-  if (process.env.DB_SECRET_ARN && !password) {
-    try {
-      console.log('Retrieving secret from Secrets Manager...');
-      const client = new SecretsManagerClient({ region: process.env.AWS_REGION || 'us-east-1' });
-      const command = new GetSecretValueCommand({ SecretId: process.env.DB_SECRET_ARN });
-      const response = await client.send(command);
-      // SecretString may be JSON or plain text; try to parse JSON
-      try {
-        const parsed = JSON.parse(response.SecretString);
-        password = parsed.password || parsed.db_password || response.SecretString;
-      } catch (e) {
-        password = response.SecretString;
-      }
-      console.log('Secret retrieved successfully');
-    } catch (err) {
-      console.error('Error retrieving secret from Secrets Manager:', err.message);
-      password = process.env.DB_PASSWORD || '';
-    }
-  }
-
-  password = password || process.env.DB_PASSWORD || '';
-
-  console.log('Creating MySQL connection pool...');
-  pool = mysql.createPool({
-    host: process.env.DB_HOST || 'myapp-mysql.c4zoaaw22k3n.us-east-1.rds.amazonaws.com',
-    user: process.env.DB_USER || 'admin',
-    password: password,
-    database: process.env.DB_NAME || 'Beer_Me_Web_MySql',
-    waitForConnections: true,
-    connectionLimit: 10,
-    queueLimit: 0,
-  });
-
-  console.log('MySQL pool created');
-  return pool;
+  console.log('Initializing DynamoDB client...');
+  const client = new DynamoDBClient({ region: process.env.AWS_REGION || 'us-east-1' });
+  docClient = DynamoDBDocumentClient.from(client);
+  console.log('DynamoDB client created');
+  return docClient;
 }
 
 const getAllBeers = async () => {
   try {
-    console.log('getAllBeers: Initializing pool...');
-    const db = await initializePool();
-    console.log('getAllBeers: Executing query...');
-    const [rows] = await db.query('SELECT * FROM beers ORDER BY date DESC');
+    console.log('getAllBeers: Scanning DynamoDB...');
+    const db = initializeDynamoDB();
+    const tableName = process.env.BEERS_TABLE || 'beers';
+    const result = await db.send(new ScanCommand({ TableName: tableName }));
+    const rows = (result.Items || []).sort((a, b) => new Date(b.date) - new Date(a.date));
     console.log('getAllBeers: Query returned', rows.length, 'rows');
     return rows;
   } catch (err) {
-    console.error('getAllBeers error:', err.message, err.code);
+    console.error('getAllBeers error:', err.message);
     throw err;
   }
 };
 
 const getTopBeers = async () => {
-  const db = await initializePool();
-  const [rows] = await db.query('SELECT * FROM beers ORDER BY rating DESC LIMIT 10');
+  const db = initializeDynamoDB();
+  const tableName = process.env.BEERS_TABLE || 'beers';
+  const result = await db.send(new ScanCommand({ TableName: tableName }));
+  const rows = (result.Items || []).sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0)).slice(0, 10);
   return rows;
 };
 
 const addBeer = async (beer) => {
-  const db = await initializePool();
-  const sql = `INSERT INTO beers (name, type, brewery, description, location, rating, image, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-  const [result] = await db.execute(sql, [
-    beer.name ?? null, beer.type ?? null, beer.brewery ?? null, beer.description ?? null,
-    beer.location ?? null, beer.rating ?? null, beer.image ?? null, beer.date ?? null,
-  ]);
-  return { insertId: result.insertId, image: beer.image, id: result.insertId };
+  const db = initializeDynamoDB();
+  const tableName = process.env.BEERS_TABLE || 'beers';
+  const id = Date.now().toString();
+  const item = {
+    id,
+    name: beer.name || '',
+    type: beer.type || '',
+    brewery: beer.brewery || '',
+    description: beer.description || '',
+    location: beer.location || '',
+    rating: beer.rating || 0,
+    image: beer.image || 'placeholder.png',
+    date: beer.date || new Date().toISOString(),
+  };
+  await db.send(new PutCommand({ TableName: tableName, Item: item }));
+  return { insertId: id, image: beer.image, id };
 };
 
 const getBeerById = async (id) => {
-  const db = await initializePool();
-  const [rows] = await db.query('SELECT * FROM beers WHERE id = ?', [id]);
-  return rows[0] || null;
+  const db = initializeDynamoDB();
+  const tableName = process.env.BEERS_TABLE || 'beers';
+  const result = await db.send(new GetCommand({ TableName: tableName, Key: { id } }));
+  return result.Item || null;
 };
 
 const editBeer = async (beer) => {
-  const db = await initializePool();
+  const db = initializeDynamoDB();
+  const tableName = process.env.BEERS_TABLE || 'beers';
 
-  if (beer.image) {
-    const [existing] = await db.query('SELECT image FROM beers WHERE id = ?', [beer.id]);
-    const existingImage = existing[0] ? existing[0].image : null;
+  // Build update expression dynamically
+  const updateParts = [];
+  const expressionAttrValues = {};
+  const expressionAttrNames = {};
 
-    const sql = `UPDATE beers SET name=?, type=?, brewery=?, description=?, location=?, rating=?, image=?, updatedDate=? WHERE id=?`;
-    const [result] = await db.execute(sql, [
-      beer.name ?? null, beer.type ?? null, beer.brewery ?? null, beer.description ?? null,
-      beer.location ?? null, beer.rating ?? null, beer.image ?? null, beer.updatedDate ?? null, beer.id ?? null,
-    ]);
+  const addUpdate = (fieldName, value) => {
+    const nameKey = `#${fieldName}`;
+    const valueKey = `:${fieldName}`;
+    updateParts.push(`${nameKey} = ${valueKey}`);
+    expressionAttrNames[nameKey] = fieldName;
+    expressionAttrValues[valueKey] = value;
+  };
 
-    const image = beer.image || existingImage;
-    if (image && image !== 'placeholder.png' && image !== existingImage) {
-      try { await fs.promises.unlink(`./public/img/${existingImage}`); } catch (e) { /* ignore */ }
-    }
+  if (beer.name !== undefined) addUpdate('name', beer.name);
+  if (beer.type !== undefined) addUpdate('type', beer.type);
+  if (beer.brewery !== undefined) addUpdate('brewery', beer.brewery);
+  if (beer.description !== undefined) addUpdate('description', beer.description);
+  if (beer.location !== undefined) addUpdate('location', beer.location);
+  if (beer.rating !== undefined) addUpdate('rating', beer.rating);
+  if (beer.image !== undefined) addUpdate('image', beer.image);
+  if (beer.updatedDate !== undefined) addUpdate('updatedDate', beer.updatedDate);
 
-    return { affectedRows: result.affectedRows, image, updatedDate: beer.updatedDate };
-  } else {
-    const sql = `UPDATE beers SET name=?, type=?, brewery=?, description=?, location=?, rating=?, updatedDate=? WHERE id=?`;
-    const [result] = await db.execute(sql, [
-      beer.name, beer.type, beer.brewery, beer.description,
-      beer.location, beer.rating, beer.updatedDate, beer.id,
-    ]);
-    return { affectedRows: result.affectedRows, updatedDate: beer.updatedDate };
+  if (updateParts.length === 0) return { affectedRows: 0, updatedDate: beer.updatedDate };
+
+  try {
+    await db.send(new UpdateCommand({
+      TableName: tableName,
+      Key: { id: beer.id },
+      UpdateExpression: 'SET ' + updateParts.join(', '),
+      ExpressionAttributeValues: expressionAttrValues,
+      ExpressionAttributeNames: Object.keys(expressionAttrNames).length > 0 ? expressionAttrNames : undefined,
+    }));
+    return { affectedRows: 1, image: beer.image, updatedDate: beer.updatedDate };
+  } catch (err) {
+    console.error('editBeer error:', err.message);
+    throw err;
   }
 };
 
 const deleteBeer = async (id) => {
-  const db = await initializePool();
-  const [rows] = await db.query('SELECT image FROM beers WHERE id = ?', [id]);
-  const image = rows[0] ? rows[0].image : null;
+  const db = initializeDynamoDB();
+  const tableName = process.env.BEERS_TABLE || 'beers';
 
-  const [result] = await db.execute('DELETE FROM beers WHERE id = ?', [id]);
-
-  if (image && image !== 'placeholder.png') {
-    try { await fs.promises.unlink(`./public/img/${image}`); } catch (e) { console.error(e); }
+  try {
+    await db.send(new DeleteCommand({ TableName: tableName, Key: { id } }));
+    return { ok: true, message: 'Beer deleted successfully' };
+  } catch (err) {
+    console.error('deleteBeer error:', err.message);
+    return { ok: false, message: 'Beer not found' };
   }
-
-  if (result.affectedRows === 0) return { ok: false, message: 'Beer not found' };
-  return { ok: true, message: 'Beer deleted successfully' };
 };
 
 export default {
