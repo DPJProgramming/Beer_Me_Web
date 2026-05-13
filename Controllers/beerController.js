@@ -1,15 +1,13 @@
 import datalayer from '../models/datalayer.js';
-import multer from "multer";
-
 
 const allBeers = async (req, res) => {
     const allBeers = await datalayer.getAllBeers();
     res.status(200).send(allBeers);
 }
 
-const getBeer = (req, res) => {
+const getBeer = async (req, res) => {
     const beerId = req.params.id;
-    const result = datalayer.getBeerById(beerId);
+    const result = await datalayer.getBeerById(beerId);
 
     res.send(result);
 }
@@ -27,7 +25,7 @@ const addBeer = async (req, res) => {
     }
     else{
         const beer = req.body;
-        beer.image = req.file ? req.file.filename : "placeholder.png";
+        beer.image = req.file ? req.file.location : "TO DO cloudfront url to placeholder image";
 
         beer.date = new Date().toLocaleDateString('en-CA');
         
@@ -36,7 +34,7 @@ const addBeer = async (req, res) => {
     }
 }
 
-const editBeer = (req, res) => {
+const editBeer = async (req, res) => {
     const isValid = validate(req.body, req.file);
 
     if(!isValid){
@@ -48,11 +46,11 @@ const editBeer = (req, res) => {
 
         //check if new image is provided
         if(req.file){
-            beer.image = req.file.filename;
+            beer.image = req.file.location;
         }
 
         //send to datalayer
-        const result = datalayer.editBeer(beer);
+        const result = await datalayer.editBeer(beer);
 
         //handle response
         if(!result){
@@ -66,8 +64,7 @@ const editBeer = (req, res) => {
 
 const deleteBeer = async (req, res) => {
     const id = req.params.id;
-
-    if(!id || id < 1 || isNaN(id)){
+    if (!id || isNaN(Number(id)) || Number(id) < 1) {
         res.status(400).send({ok: false, message: 'Invalid beer id'});
         return;
     }

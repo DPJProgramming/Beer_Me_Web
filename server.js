@@ -15,4 +15,8 @@ app.use('/img', express.static('public/img'));
 app.use((req, res) => {
     res.status(404).send("Page not found");
 })
-app.listen(3000, "0.0.0.0", () => console.log("Listening on LAN"));
+
+if (require.main === module) {
+app.listen(3000, () => console.log('Local server running'));
+}
+module.exports = app

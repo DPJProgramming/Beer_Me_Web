@@ -1,17 +1,12 @@
 import fs from 'fs';
-import Database from 'better-sqlite3';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, ScanCommand, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 
-//without logging SQL queries
-const db = new Database('./data/beers.db');
-
-//to log all SQL queries when in development mode
-//const db = new Database('./data/beers.db', { verbose: console.log });
+const db = DynamoDBDocumentClient.from(new DynamoDBClient({ region: 'us-east-1' }));
 
 const getAllBeers = async () => {
-    const result = db.prepare('SELECT * FROM beers ORDER BY date DESC');
-    const allBeers = result.all();
-    
-    return allBeers;
+    const { beers } = await db.send(new ScanCommand({ TableName: 'mybeers' }));
+    return beers;
 }
 
 const getTopBeers = async () => {
@@ -35,32 +30,21 @@ const addBeer = async (beer) => {
     return {...result, image: beer.image, id: result.lastInsertRowid};
 }
 
-const getBeerById = (id) => {
-    const query = `SELECT * FROM beers WHERE id = ?`;
-
-    const prepare = db.prepare(query);
-    const beer = prepare.get(id);
-
+const getBeerById = async (id) => {
+    const { beer } = await db.send(new GetCommand({
+        TableName: 'mybeers', Key: { id }
+    }));
     return beer;
 }
 
-const editBeer = (beer) => {
+const editBeer = async (beer) => {
     let result;
 
     //check if user has defined a new image
     if(beer.image){
         const existingImage = getImageById(beer.id);
 
-        const query =  `UPDATE beers 
-                        SET name = ?, type = ?, brewery = ?, description = ?, location = ?, 
-                           rating = ?, image = ?, updatedDate = ?
-                        WHERE id = ?`;
-
-        const prepare = db.prepare(query);
-        result = prepare.run( 
-                                beer.name, beer.type, beer.brewery, beer.description, 
-                                beer.location, beer.rating, beer.image, beer.updatedDate,beer.id
-                            );
+        await db.send(new PutCommand({ TableName: 'mybeers', Item: { ...beer, image: existingImage } }));
         
         const image = beer.image || existingImage;
 
