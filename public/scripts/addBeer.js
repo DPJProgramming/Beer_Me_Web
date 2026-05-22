@@ -1,4 +1,5 @@
 import validate from './validation.js';
+const BASE_URL = 'https://1v77mo9gx1.execute-api.us-east-1.amazonaws.com';
 
 window.onload = function() {    
     const form = document.getElementById("newBeerForm");
@@ -32,7 +33,7 @@ async function addBeer(newBeer){
         mode: "cors",
         body: newBeer
     }
-    const response = await fetch('/addBeer', config);
+    const response = await fetch(`${BASE_URL}/addBeer`, config);
 
     console.log(response);
 

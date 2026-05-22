@@ -1,0 +1,40 @@
+# serverless.yml
+service: beer-me-web
+package:
+  patterns:
+    - '!.git/**'
+    - '!public/**'
+    - '!*.sql'
+    - '!README*'
+    - '!*.md'
+    - '!node_modules/.cache/**'
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: us-east-1
+  environment:
+    S3_BUCKET: beer-me-web-serverless-http-dynamo-basic
+    DYNAMO_REGION: us-east-1
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:Scan
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource: 'arn:aws:dynamodb:us-east-1:523835807859:table/mybeers'
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+          Resource: 'arn:aws:s3:::beer-me-web-serverless-http-dynamo-basic/*'
+functions:
+  app:
+    handler: lambda.handler
+    events:
+      - httpApi: '*'
+plugins:
+  - serverless-offline  # for local testin

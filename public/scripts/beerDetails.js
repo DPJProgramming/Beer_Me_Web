@@ -1,3 +1,5 @@
+const BASE_URL = 'https://1v77mo9gx1.execute-api.us-east-1.amazonaws.com';
+
 window.onload = async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const beerId = urlParams.get('id');
@@ -13,7 +15,7 @@ window.onload = async () => {
 
 async function loadBeerDetails(beerId) {
     try {
-        const response = await fetch(`/getBeer/${beerId}`);
+        const response = await fetch(`${BASE_URL}/getBeer/${beerId}`);
         
         if (!response.ok) {
             throw new Error('Beer not found');
@@ -45,8 +47,8 @@ async function loadBeerDetails(beerId) {
 }
 
 function setBeerImage(image, beerImage, beerName) {
-    const placeholder = '/img/placeholder.png';
-    const imagePath = beerImage ? `/img/${encodeURIComponent(beerImage)}` : placeholder;
+    const placeholder = 'https://d1f2cmzbzpgnnt.cloudfront.net/img/placeholder.png';
+    const imagePath = beerImage ? beerImage : placeholder;
 
     image.onerror = () => {
         image.onerror = null;
@@ -71,7 +73,7 @@ window.deleteBeer = async function() {
 
     if (confirm('Are you sure you want to delete this beer?')) {
         try {
-            const response = await fetch(`/deleteBeer/${window.currentBeerId}`, {
+            const response = await fetch(`${BASE_URL}/deleteBeer/${window.currentBeerId}`, {
                 method: 'DELETE'
             });
 

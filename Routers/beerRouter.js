@@ -1,8 +1,11 @@
 import express from "express";
 import controller from "../controllers/beerController.js";
 import multer from "multer";
-import multers3 from 'multer-s3';
 import {S3Client} from '@aws-sdk/client-s3';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const multerS3 = require('multer-s3');
 
 const s3 = new S3Client({ region: 'us-east-1' });
 const upload = multer({

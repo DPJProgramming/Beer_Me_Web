@@ -1,0 +1,6 @@
+git
+*.sql
+public/img
+README*
+*.md
+tests/

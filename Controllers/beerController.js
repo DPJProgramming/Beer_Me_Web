@@ -25,9 +25,9 @@ const addBeer = async (req, res) => {
     }
     else{
         const beer = req.body;
-        beer.image = req.file ? req.file.location : "TO DO cloudfront url to placeholder image";
-
-        beer.date = new Date().toLocaleDateString('en-CA');
+        beer.image = beer.image = req.file 
+            ? `https://d1f2cmzbzpgnnt.cloudfront.net/${req.file.key}`
+            : "https://d1f2cmzbzpgnnt.cloudfront.net/img/placeholder.png";
         
         const result = await datalayer.addBeer(beer);
         res.send(result);
@@ -46,7 +46,7 @@ const editBeer = async (req, res) => {
 
         //check if new image is provided
         if(req.file){
-            beer.image = req.file.location;
+                beer.image = `https://d1f2cmzbzpgnnt.cloudfront.net/${req.file.key}`;
         }
 
         //send to datalayer
@@ -64,7 +64,7 @@ const editBeer = async (req, res) => {
 
 const deleteBeer = async (req, res) => {
     const id = req.params.id;
-    if (!id || isNaN(Number(id)) || Number(id) < 1) {
+    if (!id || typeof id !== 'string' || id.trim() === '') {
         res.status(400).send({ok: false, message: 'Invalid beer id'});
         return;
     }

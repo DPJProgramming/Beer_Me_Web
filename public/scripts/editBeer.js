@@ -1,9 +1,11 @@
 import validate from './validation.js';
+const BASE_URL = 'https://1v77mo9gx1.execute-api.us-east-1.amazonaws.com';
+
 
 function setBeerImage(image, beerImage, beerName) {
-    const placeholder = '/img/placeholder.png';
-    const imagePath = beerImage ? `/img/${encodeURIComponent(beerImage)}` : placeholder;
-
+    const placeholder = 'https://d1f2cmzbzpgnnt.cloudfront.net/img/placeholder.png';
+    const imagePath = beerImage ? beerImage : placeholder;
+    
     image.onerror = () => {
         image.onerror = null;
         image.src = placeholder;
@@ -56,7 +58,7 @@ async function fillFormData(beerId) {
 
     try {
         // Fetch beer data from backend
-        const response = await fetch(`/getBeer/${beerId}`);
+        const response = await fetch(`${BASE_URL}/getBeer/${beerId}`);
         
         if (!response.ok) {
             throw new Error('Beer not found');
@@ -92,7 +94,7 @@ async function submitEditBeer(editedBeer) {
         body: editedBeer
     }
 
-    const result = await fetch('/editBeer', config);
+    const result = await fetch(`${BASE_URL}/editBeer`, config);
 
     if(result.ok){
         alert('Beer updated successfully');

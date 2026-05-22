@@ -4,7 +4,7 @@ import cors from 'cors';
 
 const app = express();
 
-app.use(cors({origin: "*"}));
+app.use(cors({origin: 'https://beer-me-web.davidpjarvis.com'}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/', beerRouter);
@@ -16,7 +16,4 @@ app.use((req, res) => {
     res.status(404).send("Page not found");
 })
 
-if (require.main === module) {
-app.listen(3000, () => console.log('Local server running'));
-}
-module.exports = app
+export default app;
